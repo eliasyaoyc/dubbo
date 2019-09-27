@@ -26,6 +26,7 @@ import com.alibaba.dubbo.rpc.support.ProtocolUtils;
  *
  * @export
  * @see com.alibaba.dubbo.config.ReferenceConfig
+ * 抽象引用配置类
  */
 public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
 
