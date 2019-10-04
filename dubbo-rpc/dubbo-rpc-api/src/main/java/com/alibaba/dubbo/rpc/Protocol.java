@@ -22,6 +22,8 @@ import com.alibaba.dubbo.common.extension.SPI;
 
 /**
  * Protocol. (API/SPI, Singleton, ThreadSafe)
+ * Protocol 是服务域，它是 Invoker 暴露和引用的主功能入口。
+ * 它负责 Invoker 的生命周期管理。
  */
 @SPI("dubbo")
 public interface Protocol {
@@ -41,9 +43,14 @@ public interface Protocol {
      * export the same URL<br>
      * 3. Invoker instance is passed in by the framework, protocol needs not to care <br>
      *
-     * @param <T>     Service type
-     * @param invoker Service invoker
-     * @return exporter reference for exported service, useful for unexport the service later
+     * 暴露远程服务：<br>
+     * 1. 协议在接收请求时，应记录请求来源方地址信息：RpcContext.getContext().setRemoteAddress();<br>
+     * 2. export() 必须是幂等的，也就是暴露同一个 URL 的 Invoker 两次，和暴露一次没有区别。<br>
+     * 3. export() 传入的 Invoker 由框架实现并传入，协议不需要关心。<br>
+     *
+     * @param <T>     Service type  服务的类型
+     * @param invoker Service invoker   服务的执行体
+     * @return exporter reference for exported service, useful for unexport the service later   暴露服务的引用，用于取消暴露
      * @throws RpcException thrown when error occurs during export the service, for example: port is occupied
      */
     @Adaptive
@@ -58,10 +65,15 @@ public interface Protocol {
      * 3. When there's check=false set in URL, the implementation must not throw exception but try to recover when
      * connection fails.
      *
-     * @param <T>  Service type
-     * @param type Service class
-     * @param url  URL address for the remote service
-     * @return invoker service's local proxy
+     * 引用远程服务
+     * 1. 当用户调用 refer() 所返回的 Invoker 对象的 invoke() 方法时，协议需相应执行同 URL 远端 export() 传入的 Invoker 对象的 invoke() 方法。<br>
+     * 2. refer() 返回的 Invoker 由协议实现，协议通常需要在此 Invoker 中发送远程请求。<br>
+     * 3. 当 url 中有设置 check=false 时，连接失败不能抛出异常，并内部自动恢复。<br>
+     *
+     * @param <T>  Service type  服务的类型
+     * @param type Service class  服务的类型
+     * @param url  URL address for the remote service  远程服务的URL地址
+     * @return invoker service's local proxy   服务的本地代理
      * @throws RpcException when there's any error while connecting to the service provider
      */
     @Adaptive
