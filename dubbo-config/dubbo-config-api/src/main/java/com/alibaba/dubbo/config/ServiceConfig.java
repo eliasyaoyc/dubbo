@@ -221,8 +221,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                     doExport();
                 }
             }, delay, TimeUnit.MILLISECONDS);
-            // 立即暴露
         } else {
+            // 立即暴露
             doExport();
         }
     }
