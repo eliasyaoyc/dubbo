@@ -385,13 +385,23 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    /**
+     * 暴露dubbo url
+     */
     private void doExportUrls() {
+        //加载注册中心的 com.alibaba.dubbo.common.URL` 数组。
         List<URL> registryURLs = loadRegistries(true);
+        //循环 'protocols' ，向逐个注册中心分组暴露服务
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
 
+    /**
+     * 基于耽搁协议，暴露服务
+     * @param protocolConfig 协议配置对象
+     * @param registryURLs 注册中心连接对象数组
+     */
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         // 协议名  没有指定协议名  默认使用dubbo
         String name = protocolConfig.getName();
@@ -528,6 +538,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!Constants.SCOPE_REMOTE.toString().equalsIgnoreCase(scope)) {
+                //本地暴露服务
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
@@ -571,15 +582,24 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    /**
+     * 本地暴露服务
+     * @param url 注册中心 URL
+     */
     private void exportLocal(URL url) {
         if (!Constants.LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
+            // 创建本地 Dubbo URL
             URL local = URL.valueOf(url.toFullString())
-                    .setProtocol(Constants.LOCAL_PROTOCOL)
-                    .setHost(LOCALHOST)
-                    .setPort(0);
+                    .setProtocol(Constants.LOCAL_PROTOCOL) // injvm
+                    .setHost(LOCALHOST) // 本地 host = 127.0.0.1
+                    .setPort(0); // 端口=0
+            // 添加服务的真实类名，例如 DemoServiceImpl ，仅用于 RestProtocol 中。
             StaticContext.getContext(Constants.SERVICE_IMPL_CLASS).put(url.getServiceKey(), getServiceClass(ref));
+            // 使用 ProxyFactory 创建 Invoker 对象
+            // 使用 Protocol 暴露 Invoker 对象
             Exporter<?> exporter = protocol.export(
                     proxyFactory.getInvoker(ref, (Class) interfaceClass, local));
+            // 添加到 `exporters`
             exporters.add(exporter);
             logger.info("Export dubbo service " + interfaceClass.getName() + " to local registry");
         }

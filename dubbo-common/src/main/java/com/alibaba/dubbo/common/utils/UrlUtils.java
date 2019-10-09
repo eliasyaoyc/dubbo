@@ -124,7 +124,17 @@ public class UrlUtils {
         return u;
     }
 
+    /**
+     * 解析多个 URL ，将 `defaults` 里的参数，合并到 `address` 中。
+     * 合并的逻辑如下：
+     * 我们可以把 `address` 认为是 url ；`defaults` 认为是 defaultURL 。
+     * 若 url 有不存在的属性时，从 defaultURL 获得对应的属性，设置到 url 中。
+     * @param address 地址
+     * @param defaults 默认参数集合
+     * @return URL
+     */
     public static List<URL> parseURLs(String address, Map<String, String> defaults) {
+        // 拆分注册中心地址，按照逗号或者分号。
         if (address == null || address.length() == 0) {
             return null;
         }
@@ -134,6 +144,7 @@ public class UrlUtils {
         }
         List<URL> registries = new ArrayList<URL>();
         for (String addr : addresses) {
+            // 解析 URL ，将 `defaults` 里的参数，合并到 `addr` 中。
             registries.add(parseURL(addr, defaults));
         }
         return registries;
