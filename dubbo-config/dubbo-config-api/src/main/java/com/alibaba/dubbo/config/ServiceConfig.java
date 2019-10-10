@@ -71,18 +71,40 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     private static final long serialVersionUID = 3033787999037024738L;
 
+    /**
+     * 自适应 Protocol 实现对象
+     */
     private static final Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
+    /**
+     * 自适应 ProxyFactory 实现对象
+     */
     private static final ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
 
     private static final Map<String, Integer> RANDOM_PORT_MAP = new HashMap<String, Integer>();
 
     private static final ScheduledExecutorService delayExportExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("DubboServiceDelayExporter", true));
     private final List<URL> urls = new ArrayList<URL>();
+
+    /**
+     * 服务配置暴露的 Exporter 。
+     * URL ：Exporter 不一定是 1：1 的关系。
+     * 例如 {@link #scope} 未设置时，会暴露 Local + Remote 两个，也就是 URL ：Exporter = 1：2
+     *      {@link #scope} 设置为空时，不会暴露，也就是 URL ：Exporter = 1：0
+     *      {@link #scope} 设置为 Local 或 Remote 任一时，会暴露 Local 或 Remote 一个，也就是 URL ：Exporter = 1：1
+     * 非配置。
+     */
     private final List<Exporter<?>> exporters = new ArrayList<Exporter<?>>();
     // interface type
     private String interfaceName;
+    /**
+     * {@link #interfaceName} 对应的接口类
+     * 非配置
+     */
     private Class<?> interfaceClass;
+    /**
+     * Service 对象
+     */
     // reference to interface impl
     private T ref;
     // service name
@@ -391,7 +413,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private void doExportUrls() {
         //加载注册中心的 com.alibaba.dubbo.common.URL` 数组。
         List<URL> registryURLs = loadRegistries(true);
-        //循环 'protocols' ，向逐个注册中心分组暴露服务
+        //循环 'protocols' ，向逐个注册中心分组暴露服务    <dubbo:protocol name="dubbo" port="20880"/>
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
@@ -520,7 +542,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if ((contextPath == null || contextPath.length() == 0) && provider != null) {
             contextPath = provider.getContextpath();
         }
-        // export service
+        // export service  获得注册到注册中心的服务提供者 Host 。  如果本地调用的话 那就获取主机的host
         String host = this.findConfigedHosts(protocolConfig, registryURLs, map);
         Integer port = this.findConfigedPorts(protocolConfig, name, map);
         // 创建 Dubbo URL 对象
@@ -531,6 +553,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                     .getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
+        //-----------------------------------------到这里为止上面都是 创建注册中心URL对象----------------------------------------
 
         String scope = url.getParameter(Constants.SCOPE_KEY);
         // don't export when none is configured
@@ -588,7 +611,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      */
     private void exportLocal(URL url) {
         if (!Constants.LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
-            // 创建本地 Dubbo URL
+            // 基于原有URL 创建新的服务的本地 Dubbo URL对象
             URL local = URL.valueOf(url.toFullString())
                     .setProtocol(Constants.LOCAL_PROTOCOL) // injvm
                     .setHost(LOCALHOST) // 本地 host = 127.0.0.1

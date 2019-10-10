@@ -105,7 +105,7 @@ public class ProtocolFilterWrapper implements Protocol {
 
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
-        //注册中心
+        //注册中心  本地暴露服务不会符合这个判断。在远程暴露服务会符合暴露该判断
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }

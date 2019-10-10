@@ -144,7 +144,7 @@ public class UrlUtils {
         }
         List<URL> registries = new ArrayList<URL>();
         for (String addr : addresses) {
-            // 解析 URL ，将 `defaults` 里的参数，合并到 `addr` 中。
+            // 解析 URL ，将 `defaults` 里的参数，合并到 `addr` 中。  parseURL使用StringBuilder 不断的append 创建url
             registries.add(parseURL(addr, defaults));
         }
         return registries;

@@ -104,9 +104,15 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     // the scope for referring/exporting a service, if it's local, it means searching in current JVM only.
     private String scope;
 
+    /**
+     * 校验 RegistryConfig 配置数组。
+     * 实际上，该方法会初始化 RegistryConfig 的配置属性。
+     */
     protected void checkRegistry() {
-        // for backward compatibility
+        // for backward compatibility 向后兼容
+        // 当 RegistryConfig 对象数组为空时
         if (registries == null || registries.isEmpty()) {
+            //若有 `dubbo.registry.address` 配置，进行创建。
             String address = ConfigUtils.getProperty("dubbo.registry.address");
             if (address != null && address.length() > 0) {
                 registries = new ArrayList<RegistryConfig>();
@@ -127,6 +133,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     + Version.getVersion()
                     + ", Please add <dubbo:registry address=\"...\" /> to your spring config. If you want unregister, please set <dubbo:service registry=\"N/A\" />");
         }
+        //读取环境变量和 properties 配置到 RegistryConfig 对象数组。
         for (RegistryConfig registryConfig : registries) {
             appendProperties(registryConfig);
         }
@@ -168,18 +175,21 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         checkRegistry();
         //创建注册中心 url 数组
         List<URL> registryList = new ArrayList<URL>();
+        //循环注册中心配置对象数组 registries
         if (registries != null && !registries.isEmpty()) {
+            //获取注册中心    <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
             for (RegistryConfig config : registries) {
                 //获得注册中心的地址
                 String address = config.getAddress();
                 if (address == null || address.length() == 0) {
                     address = Constants.ANYHOST_VALUE;
                 }
-                String sysaddress = System.getProperty("dubbo.registry.address");//从启动参数读取
+                //从启动参数读取  启动参数的优先级比配置高，如果在启动配置了参数会覆盖
+                String sysaddress = System.getProperty("dubbo.registry.address");
                 if (sysaddress != null && sysaddress.length() > 0) {
                     address = sysaddress;
                 }
-                //有效地址
+                //有效地址    "N/A" 代表不配置注册中心。
                 if (address.length() > 0 && !RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
                     Map<String, String> map = new HashMap<String, String>();
                     //将各种配置对象，添加到'map'集合中
