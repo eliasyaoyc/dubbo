@@ -57,18 +57,29 @@ import static com.alibaba.dubbo.common.Constants.CHECK_KEY;
 
 /**
  * RegistryProtocol
- *
  */
 public class RegistryProtocol implements Protocol {
 
     private final static Logger logger = LoggerFactory.getLogger(RegistryProtocol.class);
     private static RegistryProtocol INSTANCE;
     private final Map<URL, NotifyListener> overrideListeners = new ConcurrentHashMap<URL, NotifyListener>();
+    /**
+     * 绑定关系集合。
+     * <p>
+     * key：服务 Dubbo URL
+     */
     //To solve the problem of RMI repeated exposure port conflicts, the services that have been exposed are no longer exposed.
     //providerurl <--> exporter
+    // 用于解决rmi重复暴露端口冲突的问题，已经暴露过的服务不再重新暴露
     private final Map<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<String, ExporterChangeableWrapper<?>>();
     private Cluster cluster;
+    /**
+     * Protocol 自适应拓展实现类，通过 Dubbo SPI 自动注入。
+     */
     private Protocol protocol;
+    /**
+     * RegistryFactory 自适应拓展实现类，通过 Dubbo SPI 自动注入。
+     */
     private RegistryFactory registryFactory;
     private ProxyFactory proxyFactory;
 
@@ -132,24 +143,31 @@ public class RegistryProtocol implements Protocol {
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         //export invoker
+        //暴露服务
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
 
+        // 获得注册中心 URL
         URL registryUrl = getRegistryUrl(originInvoker);
 
         //registry provider
+        // 获得注册中心对象
         final Registry registry = getRegistry(originInvoker);
+        // 获得服务提供者 URL
         final URL registeredProviderUrl = getRegisteredProviderUrl(originInvoker);
 
         //to judge to delay publish whether or not
         boolean register = registeredProviderUrl.getParameter("register", true);
 
+        // 向本地注册表，注册服务提供者
         ProviderConsumerRegTable.registerProvider(originInvoker, registryUrl, registeredProviderUrl);
 
+        // 向注册中心注册服务提供者（自己）
         if (register) {
             register(registryUrl, registeredProviderUrl);
-            ProviderConsumerRegTable.getProviderWrapper(originInvoker).setReg(true);
+            ProviderConsumerRegTable.getProviderWrapper(originInvoker).setReg(true);// 标记向本地注册表的注册服务提供者，已经注册
         }
 
+        // 使用 OverrideListener 对象，订阅配置规则
         // Subscribe the override data
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call the same service. Because the subscribed is cached key with the name of the service, it causes the subscription information to cover.
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registeredProviderUrl);
@@ -161,15 +179,26 @@ public class RegistryProtocol implements Protocol {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 暴露服务
+     * 此处的 Local 指的是，本地启动服务，但是不包括向注册中心注册服务的意思。
+     */
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker) {
+        // 获得在 `bounds` 中的缓存 Key
         String key = getCacheKey(originInvoker);
+        // 从 `bounds` 获得，是不是已经暴露过服务
         ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
         if (exporter == null) {
             synchronized (bounds) {
                 exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
+                // 未暴露过，进行暴露服务
                 if (exporter == null) {
+                    // 创建 Invoker Delegate 对象
                     final Invoker<?> invokerDelegete = new InvokerDelegete<T>(originInvoker, getProviderUrl(originInvoker));
+                    // 暴露服务，创建 Exporter 对象
+                    // 使用 创建的Exporter对象 + originInvoker ，创建 ExporterChangeableWrapper 对象
                     exporter = new ExporterChangeableWrapper<T>((Exporter<T>) protocol.export(invokerDelegete), originInvoker);
+                    // 添加到 `bounds`
                     bounds.put(key, exporter);
                 }
             }
@@ -206,6 +235,12 @@ public class RegistryProtocol implements Protocol {
         return registryFactory.getRegistry(registryUrl);
     }
 
+    /**
+     * 获得注册中心 URL
+     *
+     * @param originInvoker 原始 Invoker
+     * @return URL
+     */
     private URL getRegistryUrl(Invoker<?> originInvoker) {
         URL registryUrl = originInvoker.getUrl();
         if (Constants.REGISTRY_PROTOCOL.equals(registryUrl.getProtocol())) {
@@ -438,6 +473,9 @@ public class RegistryProtocol implements Protocol {
      * exporter proxy, establish the corresponding relationship between the returned exporter and the exporter exported by the protocol, and can modify the relationship at the time of override.
      *
      * @param <T>
+     *           Exporter 可变的包装器。
+     *            建立【返回的 Exporter】与【Protocol export 出的 Exporter】的对应关系。
+     *            在 override 时可以进行关系修改。
      */
     private class ExporterChangeableWrapper<T> implements Exporter<T> {
 
