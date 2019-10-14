@@ -420,7 +420,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     /**
-     * 基于耽搁协议，暴露服务
+     * 基于单个协议，暴露服务
      * @param protocolConfig 协议配置对象
      * @param registryURLs 注册中心连接对象数组
      */
