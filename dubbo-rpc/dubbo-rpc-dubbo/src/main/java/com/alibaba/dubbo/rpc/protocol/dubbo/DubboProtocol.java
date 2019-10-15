@@ -233,12 +233,16 @@ public class DubboProtocol extends AbstractProtocol {
         URL url = invoker.getUrl();
 
         // export service.
-        // 创建 DubboExporter 对象，并添加到 `exporterMap` 。
+        // 获取服务标识，理解成服务坐标也行。由服务组名，服务名，服务版本号以及端口组成。比如：
+        // demoGroup/com.alibaba.dubbo.demo.DemoService:1.0.1:20880
         String key = serviceKey(url);
+        // 创建 DubboExporter 对象
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //并添加到 `exporterMap` 。
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event
+        // 本地存根相关代码
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT);
         Boolean isCallbackservice = url.getParameter(Constants.IS_CALLBACK_SERVICE, false);
         if (isStubSupportEvent && !isCallbackservice) {
@@ -254,13 +258,13 @@ public class DubboProtocol extends AbstractProtocol {
         }
         // 启动服务器
         openServer(url);
-        // 初始化序列化优化器
+        // 优化序列化
         optimizeSerialization(url);
         return exporter;
     }
 
     private void openServer(URL url) {
-        // find server.  获得服务器地址。
+        // find server.  获取 host:port，并将其作为服务器实例的 key，用于标识当前的服务器实例。
         String key = url.getAddress();
         //client can export a service which's only for server to invoke
         //可以暴露一个仅当前 JVM 可调用的服务。目前该配置项已经不存在。
@@ -269,7 +273,7 @@ public class DubboProtocol extends AbstractProtocol {
             //从 serverMap 获得对应服务器地址已存在的通信服务器。即，不重复创建。
             ExchangeServer server = serverMap.get(key);
             if (server == null) {
-                //通信服务器不存在，调用 #createServer(url) 方法，创建服务器。
+                //通信服务器不存在，调用 #createServer(url) 方法，创建服务器实例。
                 serverMap.put(key, createServer(url));
             } else {
                 // server supports reset, use together with override
@@ -280,7 +284,7 @@ public class DubboProtocol extends AbstractProtocol {
     }
 
     /**
-     * 创建服务器
+     * 创建服务器实例
      * @param url
      * @return
      */
@@ -289,10 +293,11 @@ public class DubboProtocol extends AbstractProtocol {
         // 默认开启 server 关闭时发送 READ_ONLY 事件
         url = url.addParameterIfAbsent(Constants.CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString());
         // enable heartbeat by default
-        // 默认开启 heartbeat
+        // 添加心跳检测配置到 url 中
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
+        //获取 server 参数，默认为 netty
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
-        // 校验 Server 的 Dubbo SPI 拓展是否存在
+        // 通过 SPI 检测是否存在 server 参数所代表的 Transporter 拓展，不存在则抛出异常
         if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str))
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
 
@@ -301,14 +306,18 @@ public class DubboProtocol extends AbstractProtocol {
         // 启动服务器
         ExchangeServer server;
         try {
+            // 创建 ExchangeServer
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);
         }
-        // 校验 Client 的 Dubbo SPI 拓展是否存在
+        // 获取 client 参数，可指定 netty，mina
         str = url.getParameter(Constants.CLIENT_KEY);
         if (str != null && str.length() > 0) {
+            // 获取所有的 Transporter 实现类名称集合，比如 supportedTypes = [netty, mina]
             Set<String> supportedTypes = ExtensionLoader.getExtensionLoader(Transporter.class).getSupportedExtensions();
+            // 检测当前 Dubbo 所支持的 Transporter 实现类名称列表中，
+            // 是否包含 client 所表示的 Transporter，若不包含，则抛出异常
             if (!supportedTypes.contains(str)) {
                 throw new RpcException("Unsupported client type: " + str);
             }
