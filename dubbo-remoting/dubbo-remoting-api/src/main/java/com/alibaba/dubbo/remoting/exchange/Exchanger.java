@@ -50,6 +50,11 @@ public interface Exchanger {
      * @return message channel
      */
     @Adaptive({Constants.EXCHANGER_KEY})
+    // 这里包含了多个调用，分别如下：
+    // 1. 创建 HeaderExchangeHandler 对象
+    // 2. 创建 DecodeHandler 对象
+    // 3. 通过 Transporters 构建 Client 实例
+    // 4. 创建 HeaderExchangeClient 对象
     ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException;
 
 }
