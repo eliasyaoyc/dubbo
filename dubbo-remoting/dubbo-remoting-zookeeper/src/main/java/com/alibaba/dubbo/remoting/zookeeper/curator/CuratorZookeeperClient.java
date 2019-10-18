@@ -45,9 +45,9 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
         try {
             // 创建 CuratorFramework 构造器
             CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder()
-                    .connectString(url.getBackupAddress())
-                    .retryPolicy(new RetryNTimes(1, 1000))
-                    .connectionTimeoutMs(5000);
+                    .connectString(url.getBackupAddress())  //连接地址
+                    .retryPolicy(new RetryNTimes(1, 1000)) //重试策略：1次  间隔1000ms
+                    .connectionTimeoutMs(5000); //超时时间
             String authority = url.getAuthority();
             if (authority != null && authority.length() > 0) {
                 builder = builder.authorization("digest", authority.getBytes());

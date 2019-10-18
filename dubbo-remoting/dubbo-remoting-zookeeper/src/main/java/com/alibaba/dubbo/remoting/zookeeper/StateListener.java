@@ -16,14 +16,19 @@
  */
 package com.alibaba.dubbo.remoting.zookeeper;
 
+//状态监听器
 public interface StateListener {
 
+    //状态 - 已断开
     int DISCONNECTED = 0;
 
+    //    -  已连接
     int CONNECTED = 1;
 
+    //    -  已重连
     int RECONNECTED = 2;
 
+    // 状态变更回调
     void stateChanged(int connected);
 
 }
