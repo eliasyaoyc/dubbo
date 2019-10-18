@@ -263,7 +263,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     providers.addAll(children);
                 }
             }
-            // 匹配
+            // 匹配
             return toUrlsWithoutEmpty(url, providers);
         } catch (Throwable e) {
             throw new RpcException("Failed to lookup " + url + " from zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);
