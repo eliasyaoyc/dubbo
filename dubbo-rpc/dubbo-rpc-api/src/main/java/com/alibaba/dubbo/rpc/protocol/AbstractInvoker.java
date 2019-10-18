@@ -131,11 +131,14 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         }
 
         RpcInvocation invocation = (RpcInvocation) inv;
+        //设置Invoker
         invocation.setInvoker(this);
         if (attachment != null && attachment.size() > 0) {
+            //设置 attachment
             invocation.addAttachmentsIfAbsent(attachment);
         }
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
+        // 添加 contextAttachments 到 RpcInvocation#attachment 变量中
         if (contextAttachments != null && contextAttachments.size() != 0) {
             /**
              * invocation.addAttachmentsIfAbsent(context){@link RpcInvocation#addAttachmentsIfAbsent(Map)}should not be used here,
@@ -146,12 +149,14 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
             invocation.addAttachments(contextAttachments);
         }
         if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) {
+            // 设置异步信息到 RpcInvocation#attachment 中
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
 
         try {
+            // 抽象方法，由子类实现
             return doInvoke(invocation);
         } catch (InvocationTargetException e) { // biz exception
             Throwable te = e.getTargetException();

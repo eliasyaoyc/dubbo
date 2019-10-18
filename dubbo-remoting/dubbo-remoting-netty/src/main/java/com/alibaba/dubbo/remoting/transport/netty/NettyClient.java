@@ -156,9 +156,11 @@ public class NettyClient extends AbstractClient {
 
     @Override
     protected com.alibaba.dubbo.remoting.Channel getChannel() {
+        // 这里的 Channel 全限定名称为 org.jboss.netty.channel.Channel
         Channel c = channel;
         if (c == null || !c.isConnected())
             return null;
+        // 获取一个 NettyChannel 类型对象
         return NettyChannel.getOrAddChannel(c, getUrl(), this);
     }
 
