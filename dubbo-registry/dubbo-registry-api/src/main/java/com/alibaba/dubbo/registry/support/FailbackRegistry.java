@@ -38,24 +38,30 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * FailbackRegistry. (SPI, Prototype, ThreadSafe)
- *
+ * 支持失败重试的Registry 抽象类
  */
 public abstract class FailbackRegistry extends AbstractRegistry {
 
-    // Scheduled executor service
+    // Scheduled executor service 定时任务执行器
     private final ScheduledExecutorService retryExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("DubboRegistryFailedRetryTimer", true));
 
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
+    // 失败重试定时器，定时检查是否有请求失败，如有，无限次重试
     private final ScheduledFuture<?> retryFuture;
 
+    //失败发起注册失败的 URL 集合
     private final Set<URL> failedRegistered = new ConcurrentHashSet<URL>();
 
+    //失败取消注册失败的 URL 集合
     private final Set<URL> failedUnregistered = new ConcurrentHashSet<URL>();
 
+    //失败发起订阅失败的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> failedSubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
 
+    //失败取消订阅失败的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> failedUnsubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
 
+    //失败通知通知的 URL 集合
     private final ConcurrentMap<URL, Map<NotifyListener, List<URL>>> failedNotified = new ConcurrentHashMap<URL, Map<NotifyListener, List<URL>>>();
 
     /**
@@ -65,7 +71,9 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     public FailbackRegistry(URL url) {
         super(url);
+        // 重试频率，单位：毫秒
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
+        // 创建失败重试定时器
         this.retryFuture = retryExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
@@ -319,6 +327,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                     logger.info("Retry register " + failed);
                 }
                 try {
+                    //遍历 failedRegistered 集合  进行注册  成功就从集合中删除
                     for (URL url : failed) {
                         try {
                             doRegister(url);
@@ -339,6 +348,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                     logger.info("Retry unregister " + failed);
                 }
                 try {
+                    //遍历 failedUnregistered 集合  进行注册  成功就从集合中删除
                     for (URL url : failed) {
                         try {
                             doUnregister(url);
@@ -354,6 +364,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
         if (!failedSubscribed.isEmpty()) {
             Map<URL, Set<NotifyListener>> failed = new HashMap<URL, Set<NotifyListener>>(failedSubscribed);
+            //遍历 failedSubscribed 集合  进行注册  成功就从集合中删除
             for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(failed).entrySet()) {
                 if (entry.getValue() == null || entry.getValue().size() == 0) {
                     failed.remove(entry.getKey());
@@ -383,6 +394,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
         if (!failedUnsubscribed.isEmpty()) {
             Map<URL, Set<NotifyListener>> failed = new HashMap<URL, Set<NotifyListener>>(failedUnsubscribed);
+            //遍历 failedUnsubscribed 集合  进行注册  成功就从集合中删除
             for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(failed).entrySet()) {
                 if (entry.getValue() == null || entry.getValue().isEmpty()) {
                     failed.remove(entry.getKey());
@@ -412,6 +424,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
         if (!failedNotified.isEmpty()) {
             Map<URL, Map<NotifyListener, List<URL>>> failed = new HashMap<URL, Map<NotifyListener, List<URL>>>(failedNotified);
+            //遍历 failedNotified 集合  进行注册  成功就从集合中删除
             for (Map.Entry<URL, Map<NotifyListener, List<URL>>> entry : new HashMap<URL, Map<NotifyListener, List<URL>>>(failed).entrySet()) {
                 if (entry.getValue() == null || entry.getValue().size() == 0) {
                     failed.remove(entry.getKey());

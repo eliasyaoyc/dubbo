@@ -28,9 +28,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @date 2017/11/23
+ * 服务提供者和消费者注册表，存储 JVM 进程内自己的服务提供者和消费者的 Invoker 。
  */
 public class ProviderConsumerRegTable {
+    /**
+     * 服务提供者 Invoker 集合
+     * key：服务提供者 URL 服务键
+     */
     public static ConcurrentHashMap<String, Set<ProviderInvokerWrapper>> providerInvokers = new ConcurrentHashMap<String, Set<ProviderInvokerWrapper>>();
+
+    /**
+     * 服务消费者 Invoker 集合
+     * key：服务消费者 URL 服务键
+     */
     public static ConcurrentHashMap<String, Set<ConsumerInvokerWrapper>> consumerInvokers = new ConcurrentHashMap<String, Set<ConsumerInvokerWrapper>>();
 
     public static void registerProvider(Invoker invoker, URL registryUrl, URL providerUrl) {

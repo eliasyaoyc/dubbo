@@ -43,6 +43,11 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     // The lock for the acquisition process of the registry
     private static final ReentrantLock LOCK = new ReentrantLock();
 
+    /**
+     * Registry 集合
+     *
+     * key：{@link URL#toServiceString()}
+     */
     // Registry Collection Map<RegistryAddress, Registry>
     private static final Map<String, Registry> REGISTRIES = new ConcurrentHashMap<String, Registry>();
 
@@ -80,11 +85,19 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         }
     }
 
+    /**
+     * 获得注册中心 Registry 对象
+     *
+     * @param url 注册中心地址，不允许为空
+     * @return Registry 对象
+     */
     @Override
     public Registry getRegistry(URL url) {
-        url = url.setPath(RegistryService.class.getName())
-                .addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())
-                .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY);
+        // 修改 URL
+        url = url.setPath(RegistryService.class.getName())  // + `path`
+                .addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())   // + `parameters.interface`
+                .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY); // - `export`
+        // 计算 key
         String key = url.toServiceString();
         // Lock the registry access process to ensure a single instance of the registry
         LOCK.lock();
@@ -108,6 +121,11 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         }
     }
 
+    /**
+     * 创建Registry 对象
+     * @param url 注册中心地址
+     * @return
+     */
     protected abstract Registry createRegistry(URL url);
 
 }
