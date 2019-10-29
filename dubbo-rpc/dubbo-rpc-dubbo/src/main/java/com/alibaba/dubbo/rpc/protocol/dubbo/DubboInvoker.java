@@ -68,6 +68,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
     @Override
     protected Result doInvoke(final Invocation invocation) throws Throwable {
         RpcInvocation inv = (RpcInvocation) invocation;
+        // 获得方法名
         final String methodName = RpcUtils.getMethodName(invocation);
         // 设置 path 和 version 到 attachment 中
         inv.setAttachment(Constants.PATH_KEY, getUrl().getPath());
@@ -80,13 +81,15 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         } else {
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
+        // 远程调用
         try {
             // 获取异步配置
             boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
+            // 获得是否单向调用
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
-            //isOneway 为true  表示"单向"通信
+            // 获得超时时间
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
-            //异步无返回值
+            //isOneway 为true  表示"单向"通信
             if (isOneway) {
                 boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
                 //发送请求
@@ -96,7 +99,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 //返回一个空的RpcResult
                 return new RpcResult();
 
-                //异步有返回值
+            //异步有返回值
             } else if (isAsync) {
                 // 发送请求，并得到一个 ResponseFuture 实例
                 ResponseFuture future = currentClient.request(inv, timeout);
@@ -105,7 +108,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 // 暂时返回一个空结果
                 return new RpcResult();
 
-                // 同步调用
+            // 同步调用
             } else {
                 RpcContext.getContext().setFuture(null);
                 // 发送请求，得到一个 ResponseFuture 实例，并调用该实例的 get 方法进行等待

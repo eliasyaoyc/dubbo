@@ -81,8 +81,9 @@ public class DubboProtocol extends AbstractProtocol {
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
             if (message instanceof Invocation) {
                 Invocation inv = (Invocation) message;
-                // 获取 Invoker 实例
+                // 获得请求对应的 Invoker 对象
                 Invoker<?> invoker = getInvoker(channel, inv);
+                // 如果是callback 需要处理高版本调用低版本的问题
                 // need to consider backward-compatibility if it's a callback
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
@@ -106,6 +107,7 @@ public class DubboProtocol extends AbstractProtocol {
                         return null;
                     }
                 }
+                // 设置调用方的地址
                 RpcContext.getContext().setRemoteAddress(channel.getRemoteAddress());
                 // 通过 Invoker 调用具体的服务
                 return invoker.invoke(inv);
@@ -196,6 +198,7 @@ public class DubboProtocol extends AbstractProtocol {
                         .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
 
+    //获得请求对应的 Invoker 对象
     Invoker<?> getInvoker(Channel channel, Invocation inv) throws RemotingException {
         boolean isCallBackServiceInvoke = false;
         boolean isStubServiceInvoke = false;
@@ -207,6 +210,7 @@ public class DubboProtocol extends AbstractProtocol {
             port = channel.getRemoteAddress().getPort();
         }
         //callback
+        // 如果是参数回调，获得真正的服务名 `path` 。
         isCallBackServiceInvoke = isClientSide(channel) && !isStubServiceInvoke;
         if (isCallBackServiceInvoke) {
             path = inv.getAttachments().get(Constants.PATH_KEY) + "." + inv.getAttachments().get(Constants.CALLBACK_SERVICE_KEY);
