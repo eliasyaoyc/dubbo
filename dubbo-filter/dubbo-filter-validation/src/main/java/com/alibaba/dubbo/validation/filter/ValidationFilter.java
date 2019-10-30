@@ -30,6 +30,7 @@ import com.alibaba.dubbo.validation.Validator;
 
 /**
  * ValidationFilter
+ * 用于服务消费者和提供者中，提供 参数验证 的功能。
  */
 @Activate(group = {Constants.CONSUMER, Constants.PROVIDER}, value = Constants.VALIDATION_KEY, order = 10000)
 public class ValidationFilter implements Filter {

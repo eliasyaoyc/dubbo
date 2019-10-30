@@ -17,12 +17,24 @@
 package com.alibaba.dubbo.cache;
 
 /**
- * Cache
+ * Cache 是个缓存容器，内部可以管理缓存的键值。
  */
 public interface Cache {
 
+    /**
+     * 添加键值
+     *
+     * @param key 键
+     * @param value 值
+     */
     void put(Object key, Object value);
 
+    /**
+     * 获得值
+     *
+     * @param key 键
+     * @return 值
+     */
     Object get(Object key);
 
 }
