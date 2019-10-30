@@ -22,7 +22,7 @@ import com.alibaba.dubbo.remoting.ChannelHandler;
 import com.alibaba.dubbo.remoting.RemotingException;
 
 /**
- * AbstractChannel
+ * AbstractChannel 通道抽象类。
  */
 public abstract class AbstractChannel extends AbstractPeer implements Channel {
 
