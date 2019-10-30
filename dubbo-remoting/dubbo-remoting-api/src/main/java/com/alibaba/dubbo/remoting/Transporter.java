@@ -22,7 +22,7 @@ import com.alibaba.dubbo.common.extension.Adaptive;
 import com.alibaba.dubbo.common.extension.SPI;
 
 /**
- * Transporter. (SPI, Singleton, ThreadSafe)
+ * Transporter. (SPI, Singleton, ThreadSafe) 网络传输接口
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Transport_Layer">Transport Layer</a>
  * <a href="http://en.wikipedia.org/wiki/Client%E2%80%93server_model">Client/Server</a>
