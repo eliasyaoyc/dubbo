@@ -18,9 +18,14 @@ package com.alibaba.dubbo.rpc.cluster;
 
 import com.alibaba.dubbo.common.extension.SPI;
 
+//将对象数组合并成一个对象。
 @SPI
 public interface Merger<T> {
-
+    /**
+     * 合并 T 数组，返回合并后的 T 对象
+     * @param items T 数组
+     * @return T 对象
+     */
     T merge(T... items);
 
 }

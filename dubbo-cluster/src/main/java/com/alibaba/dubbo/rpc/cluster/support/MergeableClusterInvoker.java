@@ -51,6 +51,9 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger log = LoggerFactory.getLogger(MergeableClusterInvoker.class);
     private final Directory<T> directory;
+    /**
+     * ExecutorService 对象，并且为 CachedThreadPool 。
+     */
     private ExecutorService executor = Executors.newCachedThreadPool(new NamedThreadFactory("mergeable-cluster-executor", true));
 
     public MergeableClusterInvoker(Directory<T> directory) {
@@ -60,9 +63,11 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
     @Override
     @SuppressWarnings("rawtypes")
     public Result invoke(final Invocation invocation) throws RpcException {
+        // 获得 Invoker 集合
         List<Invoker<T>> invokers = directory.list(invocation);
-
+        // 获得 Merger 拓展名
         String merger = getUrl().getMethodParameter(invocation.getMethodName(), Constants.MERGER_KEY);
+        // 若果未配置拓展，直接调用首个可用的 Invoker 对象
         if (ConfigUtils.isEmpty(merger)) { // If a method doesn't have a merger, only invoke one Group
             for (final Invoker<T> invoker : invokers) {
                 if (invoker.isAvailable()) {
@@ -71,7 +76,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
             }
             return invokers.iterator().next().invoke(invocation);
         }
-
+        // 通过反射，获得返回类型
         Class<?> returnType;
         try {
             returnType = getInterface().getMethod(
@@ -79,12 +84,13 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
         } catch (NoSuchMethodException e) {
             returnType = null;
         }
-
+        // 提交线程池，并行执行，发起 RPC 调用，并添加到 results 中
         Map<String, Future<Result>> results = new HashMap<String, Future<Result>>();
         for (final Invoker<T> invoker : invokers) {
             Future<Result> future = executor.submit(new Callable<Result>() {
                 @Override
                 public Result call() throws Exception {
+                    // RPC 调用
                     return invoker.invoke(new RpcInvocation(invocation, invoker));
                 }
             });
@@ -92,7 +98,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
         }
 
         Object result = null;
-
+        // 阻塞等待执行执行结果，并添加到 resultList 中
         List<Result> resultList = new ArrayList<Result>(results.size());
 
         int timeout = getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
@@ -100,29 +106,32 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
             Future<Result> future = entry.getValue();
             try {
                 Result r = future.get(timeout, TimeUnit.MILLISECONDS);
-                if (r.hasException()) {
+                if (r.hasException()) { // 异常 Result ，打印错误日志，忽略
                     log.error("Invoke " + getGroupDescFromServiceKey(entry.getKey()) + 
                                     " failed: " + r.getException().getMessage(), 
                             r.getException());
-                } else {
+                } else { // 正常 Result ，添加到 resultList 中
                     resultList.add(r);
                 }
-            } catch (Exception e) {
+            } catch (Exception e) { // 异常，抛出 RpcException 异常
                 throw new RpcException("Failed to invoke service " + entry.getKey() + ": " + e.getMessage(), e);
             }
         }
-
+        // 结果大小为空，返回空的 RpcResult
         if (resultList.isEmpty()) {
             return new RpcResult((Object) null);
+        // 结果大小为 1 ，返回首个 RpcResult
         } else if (resultList.size() == 1) {
             return resultList.iterator().next();
         }
-
+        // 返回类型为 void ，返回空的 RpcResult
         if (returnType == void.class) {
             return new RpcResult((Object) null);
         }
 
+        // 【第 1 种】基于合并方法
         if (merger.startsWith(".")) {
+            // 获得合并方法 Method
             merger = merger.substring(1);
             Method method;
             try {
@@ -136,26 +145,33 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
             }
             result = resultList.remove(0).getValue();
             try {
+                // 方法返回类型匹配，合并时，修改 result
                 if (method.getReturnType() != void.class
                         && method.getReturnType().isAssignableFrom(result.getClass())) {
                     for (Result r : resultList) {
                         result = method.invoke(result, r.getValue());
                     }
+                // 方法返回类型不匹配，合并时，不修改 result
                 } else {
                     for (Result r : resultList) {
                         method.invoke(result, r.getValue());
                     }
                 }
+            // 无 Method ，抛出 RpcException 异常
             } catch (Exception e) {
                 throw new RpcException("Can not merge result: " + e.getMessage(), e);
             }
+        // 【第 2 种】基于 Merger
         } else {
             Merger resultMerger;
+            // 【第 2.1 种】根据返回值类型自动匹配 Merger
             if (ConfigUtils.isDefault(merger)) {
                 resultMerger = MergerFactory.getMerger(returnType);
+            // 【第 2.2 种】指定 Merger
             } else {
                 resultMerger = ExtensionLoader.getExtensionLoader(Merger.class).getExtension(merger);
             }
+            // 有 Merger ，进行合并
             if (resultMerger != null) {
                 List<Object> rets = new ArrayList<Object>(resultList.size());
                 for (Result r : resultList) {
@@ -163,10 +179,12 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
                 }
                 result = resultMerger.merge(
                         rets.toArray((Object[]) Array.newInstance(returnType, 0)));
+            // 无 Merger ，抛出 RpcException 异常
             } else {
                 throw new RpcException("There is no merger to merge result.");
             }
         }
+        // 返回 RpcResult 结果
         return new RpcResult(result);
     }
 
