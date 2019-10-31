@@ -39,10 +39,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 final public class MockInvoker<T> implements Invoker<T> {
+    /**
+     * ProxyFactory$Adaptive 对象
+     */
     private final static ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
+    /**
+     * mock 与 Invoker 对象的映射缓存
+     * @see #getInvoker(String)
+     */
     private final static Map<String, Invoker<?>> mocks = new ConcurrentHashMap<String, Invoker<?>>();
+    /**
+     * mock 与 Throwable 对象的映射缓存
+     * @see #getThrowable(String)
+     */
     private final static Map<String, Throwable> throwables = new ConcurrentHashMap<String, Throwable>();
 
+    /**
+     * URL 对象
+     */
     private final URL url;
 
     public MockInvoker(URL url) {
@@ -85,6 +99,7 @@ final public class MockInvoker<T> implements Invoker<T> {
 
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
+        // 获得 `"mock"` 配置项，方法级 > 类级
         String mock = getUrl().getParameter(invocation.getMethodName() + "." + Constants.MOCK_KEY);
         if (invocation instanceof RpcInvocation) {
             ((RpcInvocation) invocation).setInvoker(this);
@@ -92,10 +107,10 @@ final public class MockInvoker<T> implements Invoker<T> {
         if (StringUtils.isBlank(mock)) {
             mock = getUrl().getParameter(Constants.MOCK_KEY);
         }
-
-        if (StringUtils.isBlank(mock)) {
+        if (StringUtils.isBlank(mock)) {// 不允许为空
             throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url));
         }
+        // 标准化 `"mock"` 配置项
         mock = normalizeMock(URL.decode(mock));
         if (mock.startsWith(Constants.RETURN_PREFIX)) {
             mock = mock.substring(Constants.RETURN_PREFIX.length()).trim();

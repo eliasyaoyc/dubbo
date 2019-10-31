@@ -23,10 +23,14 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * mock impl
- *
+ * 本地伪装：通常用于服务降级，比如某验权服务，当服务提供方全部挂掉后，客户端不抛出异常，而是通过 Mock 数据返回授权失败。
+ * 服务降级：可以通过服务降级功能，临时屏蔽某个出错的非关键服务，并定义降级后的返回策略。
  */
 public class MockClusterWrapper implements Cluster {
-
+    /**
+     * 真正的 Cluster 对象
+     * cluster 字段，真正的 Cluster 对象。因为 MockClusterWrapper 是 Dubbo SPI Wrapper 类，所以对应的 Cluster 对象，都会被它所包装。
+     */
     private Cluster cluster;
 
     public MockClusterWrapper(Cluster cluster) {
