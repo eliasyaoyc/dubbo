@@ -39,19 +39,23 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * DefaultMessageClient
- * 心跳
+ * 基于消息头部( Header )的信息交换客户端实现类。
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HeaderExchangeClient.class);
 
+    //定时器线程池
     private static final ScheduledThreadPoolExecutor scheduled = new ScheduledThreadPoolExecutor(2, new NamedThreadFactory("dubbo-remoting-client-heartbeat", true));
+    //客户端
     private final Client client;
+    //信息交换通道
     private final ExchangeChannel channel;
-    // heartbeat timer
+    // heartbeat timer  心跳定时器
     private ScheduledFuture<?> heartbeatTimer;
-    // heartbeat(ms), default value is 0 , won't execute a heartbeat.
+    // heartbeat(ms), default value is 0 , won't execute a heartbeat. 是否心跳  默认是0  不执行心跳
     private int heartbeat;
+    //心跳间隔   毫秒
     private int heartbeatTimeout;
 
     public HeaderExchangeClient(Client client, boolean needHeartbeat) {
@@ -187,7 +191,9 @@ public class HeaderExchangeClient implements ExchangeClient {
     }
 
     private void startHeartbeatTimer() {
+        // 停止原有定时任务
         stopHeartbeatTimer();
+        // 发起新的定时任务
         if (heartbeat > 0) {
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {

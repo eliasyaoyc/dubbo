@@ -22,14 +22,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+//通道 Buffer 抽象类。
 public abstract class AbstractChannelBuffer implements ChannelBuffer {
-
+    /**
+     * 读取位置
+     */
     private int readerIndex;
-
+    /**
+     * 写入位置
+     */
     private int writerIndex;
-
+    /**
+     * 标记的读取位置
+     */
     private int markedReaderIndex;
-
+    /**
+     * 标记的写入位置
+     */
     private int markedWriterIndex;
 
     @Override
