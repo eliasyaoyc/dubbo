@@ -31,7 +31,7 @@ public class OverrideConfigurator extends AbstractConfigurator {
 
     @Override
     public URL doConfigure(URL currentUrl, URL configUrl) {
-        return currentUrl.addParameters(configUrl.getParameters());
+        return currentUrl.addParameters(configUrl.getParameters());  // 覆盖添加
     }
 
 }

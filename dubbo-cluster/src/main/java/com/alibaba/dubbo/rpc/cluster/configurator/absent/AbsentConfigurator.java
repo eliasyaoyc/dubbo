@@ -31,7 +31,7 @@ public class AbsentConfigurator extends AbstractConfigurator {
 
     @Override
     public URL doConfigure(URL currentUrl, URL configUrl) {
-        return currentUrl.addParametersIfAbsent(configUrl.getParameters());
+        return currentUrl.addParametersIfAbsent(configUrl.getParameters()); // 不存在时添加
     }
 
 }
