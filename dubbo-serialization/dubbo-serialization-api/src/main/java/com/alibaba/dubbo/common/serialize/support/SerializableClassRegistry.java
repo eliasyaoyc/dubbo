@@ -21,6 +21,7 @@ import com.esotericsoftware.kryo.Serializer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+//序列化优化类的注册表
 public abstract class SerializableClassRegistry {
 
     private static final Map<Class, Object> registrations = new LinkedHashMap<Class, Object>();
