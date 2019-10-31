@@ -46,12 +46,24 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger logger = LoggerFactory
             .getLogger(AbstractClusterInvoker.class);
+    /**
+     * Directory 对象  可以获得所有服务提供者的 Invoker 对象。
+     */
     protected final Directory<T> directory;
-
+    /**
+     * 集群时是否排除非可用( available )的 Invoker ，默认为 true
+     */
     protected final boolean availablecheck;
-
+    /**
+     * 是否已经销毁  若已经销毁，则不允许在调用。
+     */
     private AtomicBoolean destroyed = new AtomicBoolean(false);
-
+    /**
+     * 粘滞连接 Invoker
+     * http://dubbo.apache.org/zh-cn/docs/user/demos/stickiness.html
+     * 粘滞连接用于有状态服务，尽可能让客户端总是向同一提供者发起调用，除非该提供者挂了，再连另一台。
+     * 粘滞连接将自动开启延迟连接，以减少长连接数。
+     */
     private volatile Invoker<T> stickyInvoker = null;
 
     public AbstractClusterInvoker(Directory<T> directory) {
@@ -59,11 +71,13 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     }
 
     public AbstractClusterInvoker(Directory<T> directory, URL url) {
+        // 初始化 directory
         if (directory == null)
             throw new IllegalArgumentException("service directory == null");
 
         this.directory = directory;
         //sticky: invoker.isAvailable() should always be checked before using when availablecheck is true.
+        // 初始化 availablecheck
         this.availablecheck = url.getParameter(Constants.CLUSTER_AVAILABLE_CHECK_KEY, Constants.DEFAULT_CLUSTER_AVAILABLE_CHECK);
     }
 
@@ -94,6 +108,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     }
 
     /**
+     * 使用 loadbalance 选择 invoker.
      * Select a invoker using loadbalance policy.</br>
      * a)Firstly, select an invoker using loadbalance. If this invoker is in previously selected list, or, 
      * if this invoker is unavailable, then continue step b (reselect), otherwise return the first selected invoker</br>
@@ -101,10 +116,10 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      * the selected invoker has the minimum chance to be one in the previously selected list, and also 
      * guarantees this invoker is available.
      *
-     * @param loadbalance load balance policy
-     * @param invocation
-     * @param invokers invoker candidates
-     * @param selected  exclude selected invokers or not
+     * @param loadbalance load balance policy  Loadbalance 对象，提供负责均衡策略
+     * @param invocation Invocation 对象
+     * @param invokers invoker candidates  候选的 Invoker 集合
+     * @param selected  exclude selected invokers or not  已选过的 Invoker 集合. 注意：输入保证不重复
      * @return
      * @throws RpcException
      */
@@ -147,9 +162,11 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return invoker;
     }
 
+    //从候选的 Invoker 集合，选择一个最终调用的 Invoker 对象
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation, List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
         if (invokers == null || invokers.isEmpty())
             return null;
+        // 【第一种】如果只有一个 Invoker ，直接选择
         if (invokers.size() == 1)
             return invokers.get(0);
         if (loadbalance == null) {
@@ -207,6 +224,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             throws RpcException {
 
         //Allocating one in advance, this list is certain to be used.
+        // 预先分配一个，这个列表是一定会用到的.
         List<Invoker<T>> reselectInvokers = new ArrayList<Invoker<T>>(invokers.size() > 1 ? (invokers.size() - 1) : invokers.size());
 
         //First, try picking a invoker not in `selected`.
@@ -261,8 +279,10 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return null;
     }
 
+    //调用服务提供者的逻辑。
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
+        // 校验是否销毁
         checkWhetherDestroyed();
         LoadBalance loadbalance = null;
 
@@ -280,8 +300,9 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
                     .getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         }
-        //调用 doInvoke 进行后续操作
+        //设置编号， 若是异步调用
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+        // 执行调用
         return doInvoke(invocation, invokers, loadbalance);
     }
 
