@@ -42,13 +42,22 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     // logger
     private static final Logger logger = LoggerFactory.getLogger(AbstractDirectory.class);
-
+    /**
+     * 注册中心 URL
+     */
     private final URL url;
-
+    /**
+     * 是否已经销毁
+     */
     private volatile boolean destroyed = false;
-
+    /**
+     * 消费者 URL
+     * 若未显示调用 {@link #AbstractDirectory(URL, URL, List)} 构造方法，consumerUrl 等于 {@link #url}
+     */
     private volatile URL consumerUrl;
-
+    /**
+     * Router 数组
+     */
     private volatile List<Router> routers;
 
     public AbstractDirectory(URL url) {
@@ -64,6 +73,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
             throw new IllegalArgumentException("url == null");
         this.url = url;
         this.consumerUrl = consumerUrl;
+        // 设置 Router 数组
         setRouters(routers);
     }
 
