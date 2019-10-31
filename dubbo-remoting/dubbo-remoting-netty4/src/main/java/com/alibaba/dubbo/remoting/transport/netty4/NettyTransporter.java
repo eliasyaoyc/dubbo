@@ -23,15 +23,21 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.Server;
 import com.alibaba.dubbo.remoting.Transporter;
 
+//基于 Netty4 的网络传输实现类
 public class NettyTransporter implements Transporter {
 
+    /**
+     * 拓展名
+     */
     public static final String NAME = "netty";
 
+    //创建 NettyServer 对象
     @Override
     public Server bind(URL url, ChannelHandler listener) throws RemotingException {
         return new NettyServer(url, listener);
     }
 
+    //创建 NettyClient 对象
     @Override
     public Client connect(URL url, ChannelHandler listener) throws RemotingException {
         return new NettyClient(url, listener);
