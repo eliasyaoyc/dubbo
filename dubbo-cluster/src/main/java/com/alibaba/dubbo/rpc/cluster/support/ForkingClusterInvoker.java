@@ -59,16 +59,20 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(final Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+            // 检查 invokers 即可用Invoker集合是否为空，如果为空，那么抛出异常
             checkInvokers(invokers, invocation);
+            // 保存选择的 Invoker 集合
             final List<Invoker<T>> selected;
-            // 获取 forks 配置
+            // 得到最大并行数，默认为 Constants.DEFAULT_FORKS = 2
             final int forks = getUrl().getParameter(Constants.FORKS_KEY, Constants.DEFAULT_FORKS);
-            // 获取超时配置
+            // 获得调用超时时间，默认为 DEFAULT_TIMEOUT = 1000 毫秒
             final int timeout = getUrl().getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
-            // 如果 forks 配置不合理，则直接将 invokers 赋值给 selected
+            // 若最大并行书小于等于 0，或者大于 invokers 的数量，直接使用 invokers
             if (forks <= 0 || forks >= invokers.size()) {
                 selected = invokers;
             } else {
+                // 循环，根据负载均衡机制从 invokers，中选择一个个Invoker ，从而组成 Invoker 集合。
+                // 注意，因为增加了排重逻辑，所以不能保证获得的 Invoker 集合的大小，小于最大并行数
                 selected = new ArrayList<Invoker<T>>();
                 // 循环选出 forks 个 Invoker，并添加到 selected 中
                 for (int i = 0; i < forks; i++) {
@@ -82,11 +86,13 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
 
             // ----------------------✨ 分割线1 ✨---------------------- //
-
+            // 设置已经调用的 Invoker 集合，到 Context 中
             RpcContext.getContext().setInvokers((List) selected);
+            // 异常计数器
             final AtomicInteger count = new AtomicInteger();
+            // 创建阻塞队列
             final BlockingQueue<Object> ref = new LinkedBlockingQueue<Object>();
-            // 遍历 selected 列表
+            // 循环 selected 集合，提交线程池，发起 RPC 调用
             for (final Invoker<T> invoker : selected) {
                 // 为每个 Invoker 创建一个执行线程
                 executor.execute(new Runnable() {

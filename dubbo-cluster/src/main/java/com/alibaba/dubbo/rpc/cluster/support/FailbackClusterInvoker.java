@@ -43,12 +43,14 @@ import java.util.concurrent.TimeUnit;
  * Especially useful for services of notification.
  *
  * <a href="http://en.wikipedia.org/wiki/Failback">Failback</a>
- * 在调用失败后，返回一个空结果给服务提供者。并通过定时任务对失败的调用进行重传，适合执行消息通知等操作。
+ * 在调用失败后，返回一个空结果给服务提供者 后台记录失败请求。并通过定时任务对失败的调用进行重传，适合执行消息通知等操作。
  */
 public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(FailbackClusterInvoker.class);
-
+    /**
+     * 重试频率
+     */
     private static final long RETRY_FAILED_PERIOD = 5 * 1000;
 
     /**
@@ -57,8 +59,13 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
      */
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2,
             new NamedInternalThreadFactory("failback-cluster-timer", true));
-
+    /**
+     * 失败任务集合
+     */
     private final ConcurrentMap<Invocation, AbstractClusterInvoker<?>> failed = new ConcurrentHashMap<Invocation, AbstractClusterInvoker<?>>();
+    /**
+     * 重试任务 Future
+     */
     private volatile ScheduledFuture<?> retryFuture;
 
     public FailbackClusterInvoker(Directory<T> directory) {
@@ -66,6 +73,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
     }
 
     private void addFailed(Invocation invocation, AbstractClusterInvoker<?> router) {
+        // 若定时任务未初始化，进行创建
         if (retryFuture == null) {
             synchronized (this) {
                 if (retryFuture == null) {
@@ -126,8 +134,9 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     protected Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+            // 检查 invokers 即可用Invoker集合是否为空，如果为空，那么抛出异常
             checkInvokers(invokers, invocation);
-            // 选择 Invoker
+            // 根据负载均衡机制从 invokers 中选择一个Invoker
             Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
             // 进行调用
             return invoker.invoke(invocation);
