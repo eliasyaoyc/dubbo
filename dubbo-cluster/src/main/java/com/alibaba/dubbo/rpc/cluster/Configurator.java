@@ -35,7 +35,7 @@ public interface Configurator extends Comparable<Configurator> {
      * Configure the provider url.
      * 配置到 URL 中
      *
-     * @param url - old rovider url.
+     * @param url - old provider url.
      * @return new provider url.
      */
     URL configure(URL url);

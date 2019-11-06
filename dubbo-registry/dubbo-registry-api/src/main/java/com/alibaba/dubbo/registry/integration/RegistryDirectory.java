@@ -180,9 +180,13 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
      * 将overrideURL 转换为 map，供重新 refer 时使用.
      * 每次下发全部规则，全部重新组装计算
      * @param urls Contract:
+     *             表示全局规则(对所有的提供者全部生效)
      *             </br>1.override://0.0.0.0/...( or override://ip:port...?anyhost=true)&para1=value1... means global rules (all of the providers take effect)
+     *             特例规则（只针对某个提供者生效）
      *             </br>2.override://ip:port...?anyhost=false Special rules (only for a certain provider)
+     *             需要注册中心自行计算.
      *             </br>3.override:// rule is not supported... ,needs to be calculated by registry itself.
+     *             表示清除override
      *             </br>4.override://0.0.0.0/ without parameters means clearing the override
      * @return
      */
